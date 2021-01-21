@@ -1,0 +1,7 @@
+site_name: Zhe's Engineering Notes
+nav:
+    - Home: index.md
+    - Projects:
+        - "Booster RF waveform generator": projects/booster-wfg.md
+    - About: about.md
+theme: material
