@@ -1,7 +1,21 @@
 site_name: Zhe's Engineering Notes
 nav:
-    - Home: index.md
-    - Projects:
-        - "Booster RF waveform generator": projects/booster-wfg.md
-    - About: about.md
-theme: material
+  - Home: index.md
+  - Projects:
+    - "Booster RF waveform generator": projects/booster-wfg.md
+  - About: about.md
+theme:
+  name: material
+  palette:
+    scheme: default
+  features:
+    - search.suggest
+    - search.highlight
+    - header.autohide
+#    - navigation.tabs
+extra_css:
+  - stylesheets/extra.css
+plugins:
+  - search
+repo_url: https://github.com/SPEAR3-CTRL/engr-notes
+repo_name: SPEAR3-CTRL/engr-notes
