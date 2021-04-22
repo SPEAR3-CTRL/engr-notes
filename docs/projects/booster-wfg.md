@@ -33,10 +33,10 @@ BOO-RF-WFG:Amp | Waveform amplitude | Volt |
 BOO-RF-WFG:Offset | Waveform offset | Volt |
 BOO-RF-WFG:Delay | Delay of the waveform relative to the TTL signal | Degree |
 BOO-RF-WFG:WavType | Type of waveform |  |
-BOO-RF-WFG:WhiteCircCurrLo | Lower limit of the white circuit current | milliAmpere |
-BOO-RF-WFG:WhiteCircCurrHi | Upper limit of the white circuit current | milliAmpere |
-BOO-RF-WFG:WhiteCircVoltLo | Lower limit of the white circuit voltage | milliVolt |
-BOO-RF-WFG:WhiteCircVoltHi | Upper limit of the white circuit voltage | milliVolt |
+BOO-RF-WFG:WhiteCircCurrOn | Minimum white circuit current to turn RF on | milliAmpere |
+BOO-RF-WFG:WhiteCircCurrOff | Minimum white circuit current to keep RF on | milliAmpere |
+BOO-RF-WFG:WhiteCircVoltOn | Minimum white circuit voltage to turn RF on | milliVolt |
+BOO-RF-WFG:WhiteCircVoltOff | Minimum white circuit voltage to keep RF on | milliVolt |
 
 ### PVs in the BOO-WC soft IOC
 
