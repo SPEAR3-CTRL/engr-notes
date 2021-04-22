@@ -23,17 +23,285 @@ PV | Description | Channel
 inj:BOO_DC$CURR_AM | White circuit current
 inj:BOO_AC$VOLT_AM | White circuit voltage
 
-### PVs planned for the BOO-RF-WFG soft IOC
+### PVs in the BOO-RF-WFG soft IOC
 
-PV | Description | Channel
--- | ----------- | -------
-BOO-RF-WFG:WavSetpt | Waveform setpoint |
-BOO-RF-WFG:WavRdbk | Waveform readback from the waveform generator |
-BOO-RF-WFG:Amp | Waveform amplitude |
-BOO-RF-WFG:Offset | Waveform offset |
-BOO-RF-WFG:Delay | Delay of the waveform relative to the TTL signal |
-BOO-RF-WFG:WavType | Type of waveform |
-BOO-RF-WFG:WhiteCircCurrLo | Lower limit of the white circuit current (mA) |
-BOO-RF-WFG:WhiteCircCurrHi | Upper limit of the white circuit current (mA) |
-BOO-RF-WFG:WhiteCircVoltLo | Lower limit of the white circuit voltage (mV) |
-BOO-RF-WFG:WhiteCircVoltHi | Upper limit of the white circuit voltage (mV) |
+PV | Description | Unit | Channel
+-- | ----------- | ---- | -------
+BOO-RF-WFG:WavSetpt | Waveform setpoint | Volt |
+BOO-RF-WFG:WavRdbk | Waveform readback from the waveform generator | Volt |
+BOO-RF-WFG:Amp | Waveform amplitude | Volt |
+BOO-RF-WFG:Offset | Waveform offset | Volt |
+BOO-RF-WFG:Delay | Delay of the waveform relative to the TTL signal | Degree |
+BOO-RF-WFG:WavType | Type of waveform |  |
+BOO-RF-WFG:WhiteCircCurrLo | Lower limit of the white circuit current | milliAmpere |
+BOO-RF-WFG:WhiteCircCurrHi | Upper limit of the white circuit current | milliAmpere |
+BOO-RF-WFG:WhiteCircVoltLo | Lower limit of the white circuit voltage | milliVolt |
+BOO-RF-WFG:WhiteCircVoltHi | Upper limit of the white circuit voltage | milliVolt |
+
+### PVs in the BOO-WC soft IOC
+
+PV | Description | Unit | Channel
+-- | ----------- | ---- | -------
+BOO-WC:Curr | White circuit DC current | milliAmpere |
+BOO-WC:Volt | White circuit AC voltage | milliVolt |
+
+## Development notes
+
+### The AWG SoftIOC
+
+#### Initialize an empty softioc
+
+```bash
+mkdir ioc-awg
+cd ioc-awg
+```
+
+```bash
+makeBaseApp.pl -t ioc awg
+makeBaseApp.pl -i -t ioc awg
+```
+
+Then we have the following folder structure:
+
+```
+|--ioc-awg
+    |--awgApp
+    |--configure
+    |--iocBoot
+    |--Makefile
+```
+
+Compile the project:
+
+```bash
+make
+```
+
+After this, several new folders are created:
+
+```
+|--ioc-awg
+    |--awgApp
+    |--*bin
+    |--configure
+    |--*dbd
+    |--iocBoot
+    |--*lib
+    |--Makefile
+```
+
+```bash
+cd iocBoot/iocawg
+chmod u+x st.cmd
+```
+
+```bash
+./st.cmd
+```
+
+#### Add the AWG records
+
+Assume we are at the project root, then we add a database file:
+
+```bash
+cd awgApp/Db
+```
+
+Create an `awg.db` file there, fill in whatever record you want. Say:
+
+```
+record(calc, "$(user):awg:random") {
+    field(DESC, "Just a random number")
+    field(SCAN, "1 second")
+    field(INPA, "10")
+    field(CALC, "RNDM*A")
+}
+```
+
+Configure the `Makefile` to include it in the compiling process:
+
+```makefile
+#----------------------------------------------------
+# Create and install (or just install) into <top>/db
+# databases, templates, substitutions like this
+DB += awg.db
+```
+
+Then configure the start up script `st.cmd`:
+
+```makefile
+## Load record instances
+dbLoadRecords("db/awg.db","user=wena")
+```
+
+Run it:
+
+```bash
+cd iocBoot/iocawg
+./st.cmd
+```
+
+Test it:
+
+Open another terminal within the same network, try:
+
+```bash
+caget wena:awg:random
+```
+
+or
+
+```bash
+camonitor wena:awg:random
+```
+
+#### Add the asyn and stream packages
+
+Now we are going to talk with the AWG. Make a new record inside the `awg.db` and create a new `awg.proto`:
+
+Then configure the project to add the asyn and stream modules, edit:
+
+```bash
+vi configure/RELEASE
+```
+
+And add:
+
+```makefile
+# Variables and paths to dependent modules:
+#MODULES = /path/to/modules
+#MYMODULE = $(MODULES)/my-module
+SUPPORT = ${HOME}/EPICS/support
+ASYN = $(SUPPORT)/asyn
+STREAM = $(SUPPORT)/stream
+```
+
+Then edit the `Makefile` in the src folder and include the corresponding records provided by asyn and stream modules, so that we can use them in `st.cmd` and our C scripts:
+
+```bash
+vi awgApp/src/Makefile
+```
+
+Edit it like this:
+
+```makefile
+# Include dbd files from all support applications:
+awg_DBD += asyn.dbd
+awg_DBD += stream.dbd
+awg_DBD += drvAsynIPPort.dbd
+
+# Add all the support libraries needed by this IOC
+awg_LIBS += asyn
+awg_LIBS += stream
+```
+
+Now tell the softioc where to find the `.proto` files:
+
+```bash
+vi iocBoot/iocawg/st.cmd
+```
+
+Edit it like this:
+
+```makefile
+< envPaths
+epicsEnvSet("STREAM_PROTOCOL_PATH", "${TOP}/awgApp/Db")
+```
+
+Finally in the same file, configure the telnet stuff, so that the softioc can talk to the correct instrument:
+
+```makefile
+## Register all support components
+dbLoadDatabase "dbd/awg.dbd"
+awg_registerRecordDeviceDriver pdbbase
+drvAsynIPPortConfigure("AWG", "10.0.0.10:5024")
+```
+
+Make and run, see if things work.
+
+Note that to retrieve the full string, you have to do this:
+
+```bash
+caget -S wena:awg:idn.VAL$
+```
+
+instead of:
+
+```bash
+caget wena:awg:idn
+```
+
+https://epics.anl.gov/tech-talk/2019/msg01850.php
+
+If you are using fish shell, remember to escape `$`:
+
+```bash
+caget -S wena:awg:idn.VAL\$
+```
+
+### AWG message format
+
+##### BSWV
+
+```
+C1:BSWV WVTP,ARB,FRQ,40.6504065HZ,PERI,0.0246S,AMP,10.6671V,MAX_OUTPUT_AMP,20V,OFST,3.95e-05V,HLEV,5.3336V,LLEV,-5.33352V,PHSE,0
+```
+
+##### SRATE
+
+```
+C1:SRATE MODE,TARB,VALUE,10000Sa/s
+```
+
+##### WVDT
+
+```
+C1:WVDT WVTP,ARB,FRQ,40.6504065HZ,PERI,0.0246S,AMP,10.6671V,MAX_OUTPUT_AMP,20V,OFST,3.95e-05V,HLEV,5.3336V,LLEV,-5.33352V,PHSE,0
+```
+
+### Misc
+
+#### Understand the EPICS SoftIOC file structure
+
+- root: {TOP}
+    - db: define/save all records
+    - dbd: ?
+    - iocBoot
+        - {project name}: {IOC}
+            - st.cmd: the startup commands
+    - bin: created after compiling
+        - {platform}
+            - {compiled executable}: the one that execute the startup commands
+
+#### Workflow to create a SoftIOC
+
+1. Make a dir and cd into it
+2. Use makeBaseApp.pl to create an ioc project, give it a name, say, BERSERK
+    - The folder BERSERKApp will be created, this is the src folder for our softioc
+3. Create the records inside the src folder: db file inside the BERSERKApp/Db
+4. Modify the Makefile inside the src folder to include the db/stuff
+5. Go to iocBoot/iocBERSERK, adapt the st.cmd to the status
+    - st === start up
+6. Remember to set the system environment, then cd to the root folder of this project, then make
+    - db, dbd, bin, lib will be created
+7. Start the softioc: cd to the st.cmd dir, then call the executable upon it
+
+#### How to deal with multiple network interface issue on windows
+
+In the client terminal, do the following:
+
+```cmd
+SET "EPICS_CA_AUTO_ADDR_LIST=NO"
+SET "EPICS_CA_ADDR_LIST=10.0.0.172"
+```
+
+Or set them in the system env.
+
+However, the solution above can't deal with multiple IOCs on the same host, in that case, use the following settings:
+
+```cmd
+SET "EPICS_CA_AUTO_ADDR_LIST=NO"
+SET "EPICS_CA_ADDR_LIST=10.0.0.255"
+```
+
+which uses the broadcast address instead of the IP address of the host.
