@@ -19,3 +19,6 @@ plugins:
   - search
 repo_url: https://github.com/SPEAR3-CTRL/engr-notes
 repo_name: SPEAR3-CTRL/engr-notes
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
