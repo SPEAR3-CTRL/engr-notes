@@ -47,9 +47,9 @@ BOO-WC:Volt | White circuit AC voltage | milliVolt |
 
 ## Development notes
 
-### The AWG SoftIOC
+### The AWG soft IOC
 
-#### Initialize an empty softioc
+#### Initialize an empty soft IOC
 
 ```bash
 mkdir ioc-awg
@@ -261,7 +261,7 @@ C1:WVDT WVTP,ARB,FRQ,40.6504065HZ,PERI,0.0246S,AMP,10.6671V,MAX_OUTPUT_AMP,20V,O
 
 ### Misc
 
-#### Understand the EPICS SoftIOC file structure
+#### Understand the EPICS soft IOC file structure
 
 - root: {TOP}
     - db: define/save all records
@@ -273,7 +273,7 @@ C1:WVDT WVTP,ARB,FRQ,40.6504065HZ,PERI,0.0246S,AMP,10.6671V,MAX_OUTPUT_AMP,20V,O
         - {platform}
             - {compiled executable}: the one that execute the startup commands
 
-#### Workflow to create a SoftIOC
+#### Workflow to create a soft IOC
 
 1. Make a dir and cd into it
 2. Use makeBaseApp.pl to create an ioc project, give it a name, say, BERSERK
