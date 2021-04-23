@@ -27,23 +27,23 @@ inj:BOO_AC$VOLT_AM | White circuit voltage
 
 PV | Description | Unit | Channel
 -- | ----------- | ---- | -------
-BOO-RF-WFG:WavSetpt | Waveform setpoint | Volt |
-BOO-RF-WFG:WavRdbk | Waveform readback from the waveform generator | Volt |
-BOO-RF-WFG:Amp | Waveform amplitude | Volt |
-BOO-RF-WFG:Offset | Waveform offset | Volt |
-BOO-RF-WFG:Delay | Delay of the waveform relative to the TTL signal | Degree |
+BOO-RF-WFG:WavSetpt | Waveform setpoint | V |
+BOO-RF-WFG:WavRdbk | Waveform readback from the waveform generator | V |
+BOO-RF-WFG:Amp | Waveform amplitude | V |
+BOO-RF-WFG:Offset | Waveform offset | V |
+BOO-RF-WFG:Delay | Delay of the waveform relative to the TTL signal | ms |
 BOO-RF-WFG:WavType | Type of waveform |  |
-BOO-RF-WFG:WhiteCircCurrOn | Minimum white circuit current to turn RF on | milliAmpere |
-BOO-RF-WFG:WhiteCircCurrOff | Minimum white circuit current to keep RF on | milliAmpere |
-BOO-RF-WFG:WhiteCircVoltOn | Minimum white circuit voltage to turn RF on | milliVolt |
-BOO-RF-WFG:WhiteCircVoltOff | Minimum white circuit voltage to keep RF on | milliVolt |
+BOO-RF-WFG:WhiteCircCurrOn | Minimum white circuit current to turn RF on | mA |
+BOO-RF-WFG:WhiteCircCurrOff | Minimum white circuit current to keep RF on | mA |
+BOO-RF-WFG:WhiteCircVoltOn | Minimum white circuit voltage to turn RF on | mV |
+BOO-RF-WFG:WhiteCircVoltOff | Minimum white circuit voltage to keep RF on | mV |
 
 ### PVs in the BOO-WC soft IOC
 
 PV | Description | Unit | Channel
 -- | ----------- | ---- | -------
-BOO-WC:Curr | White circuit DC current | milliAmpere |
-BOO-WC:Volt | White circuit AC voltage | milliVolt |
+BOO-WC:Curr | White circuit DC current | mA |
+BOO-WC:Volt | White circuit AC voltage | mV |
 
 ## Development notes
 
