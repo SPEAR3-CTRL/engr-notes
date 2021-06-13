@@ -16,6 +16,16 @@ inj:BOO_RF$POWER_MAX_AS | Waveform amplitude |
 inj:BOO_RF$PHASE_AS | Waveform delay |
 inj:BOO_RF$WAVEFORM_DS | Type of waveform |
 
+### PV correspondence between the current system and the new system
+
+PV in the current system | PV in the new system | Description
+------------------------ | -------------------- | -----------
+inj:BOO_RF$POWER_AS | BOO-RF-WFG:Waveform | Waveform setpoint
+inj:BOO_RF$POWER_MIN_AS | BOO-RF-WFG:Offset | Waveform offset
+inj:BOO_RF$POWER_MAX_AS | BOO-RF-WFG:Amp | Waveform amplitude
+inj:BOO_RF$PHASE_AS | BOO-RF-WFG:Delay | Waveform delay
+inj:BOO_RF$WAVEFORM_DS | BOO-RF-WFG:WavType | Type of waveform
+
 ### PVs watched by the BOO-RF-WFG soft IOC
 
 PV | Description | Channel
@@ -23,27 +33,77 @@ PV | Description | Channel
 inj:BOO_DC$CURR_AM | White circuit current
 inj:BOO_AC$VOLT_AM | White circuit voltage
 
-### PVs in the BOO-RF-WFG soft IOC
+### Main tunable PVs in the BOO-RF-WFG soft IOC
 
 PV | Description | Unit | Channel
 -- | ----------- | ---- | -------
-BOO-RF-WFG:WavSetpt | Waveform setpoint | V |
-BOO-RF-WFG:WavRdbk | Waveform readback from the waveform generator | V |
-BOO-RF-WFG:Amp | Waveform amplitude | V |
-BOO-RF-WFG:Offset | Waveform offset | V |
-BOO-RF-WFG:Delay | Delay of the waveform relative to the TTL signal | ms |
-BOO-RF-WFG:WavType | Type of waveform |  |
-BOO-RF-WFG:WhiteCircCurrOn | Minimum white circuit current to turn RF on | mA |
-BOO-RF-WFG:WhiteCircCurrOff | Minimum white circuit current to keep RF on | mA |
-BOO-RF-WFG:WhiteCircVoltOn | Minimum white circuit voltage to turn RF on | mV |
-BOO-RF-WFG:WhiteCircVoltOff | Minimum white circuit voltage to keep RF on | mV |
+BOO-RF-WFG:Output | Toggle the channel output. 0: turn off the channel output; 1: turn on the channel output |  |
+BOO-RF-WFG:WavType | Set the waveform type. Valid values are 1, 2, 3, and 4. 1: t^4 waveform; 2: linear waveform; 3: sine wave waveform; 4: Edot and E^4 dependent wave waveform |  |
+BOO-RF-WFG:Amp | Set the upper bound of the waveform buffer. Waveform buffer will be re-scaled to reach this upper bound | V |
+BOO-RF-WFG:Offset | Set the lower bound of the waveform buffer. Waveform buffer will be re-scaled to reach this lower bound. Note that the lower bound must be no less than 10 mV | V |
+BOO-RF-WFG:Delay | Set the delay of the waveform buffer in ms. Since the waveform repetition period is always 100 ms, 50 ms delay means a 180 deg forward phase shift | ms |
+BOO-RF-WFG:Waveform | Update current waveform buffer. The waveform buffer specified by this PV will replace the one with the name $(device):WavName that stored in the AWG. ALERT: one should NOT use this PV directly to update the waveform buffer! |  |
+
+### Constants
+
+PV | Description | Unit | Channel
+-- | ----------- | ---- | -------
+TTL:PRF | TTL pulse repetition frequency (10 Hz). Should NOT be changed | Hz |
+
+### White circuit related PVs in the BOO-RF-WFG soft IOC
+PV | Description | Unit | Channel
+-- | ----------- | ---- | -------
+BOO-RF-WFG:WhiteCircCurrOn | Minimum white circuit current to turn RF on. Default value: 200 mA | mA |
+BOO-RF-WFG:WhiteCircCurrOff | Minimum white circuit current to keep RF on. Default value: 100 mA | mA |
+BOO-RF-WFG:WhiteCircVoltOn | Minimum white circuit voltage to turn RF on. Default value: 900 mV | mV |
+BOO-RF-WFG:WhiteCircVoltOff | Minimum white circuit voltage to keep RF on. Default value: 200 mV | mV |
+BOO-RF-WFG:WhiteCircOn | Calculate the on/off status of the white circuit based on the relationship between the white circuit current/voltage and the 4 white circuit threshold PVs defined above. 0: white circuit is off; 1: white circuit is on |  |
+
+### Readback PVs in the BOO-RF-WFG soft IOC
+
+PV | Description | Unit | Channel
+-- | ----------- | ---- | -------
+BOO-RF-WFG:OutputRdbk | Channel output status monitor |  |
+BOO-RF-WFG:AmpRRdbk | AWG amplitude readback. Note that the amplitude of AWG (AmpR) is different from the main tunable PV amplitude (Amp). The relationship is: AmpR = Amp - Offset | V |
+BOO-RF-WFG:OffsetRRdbk | AWG offset readback. Note that the offset of AWG (OffsetR) is different from the main tunable PV offset (Offset). The relationship is: OffsetR = (Amp + Offset) / 2 | V |
+BOO-RF-WFG:PhaseRRdbk | AWG phase readback. Note that the phase of AWG (PhaseR) is different from the main tunable PV delay (Delay). The relationship is: PhaseR = -3.6 * Delay | deg |
+BOO-RF-WFG:SRateRdbk | AWG sampling rate readback. Should always be 10,000 Sa/s | Sa/s |
+BOO-RF-WFG:WaveformRdbk | AWG current waveform buffer readback. Note that the readback points are the raw data, need to use Amp, Offset and Delay to transform it to the real output waveform buffer |  |
+
+### Internal PVs in the BOO-RF-WFG soft IOC
+
+PV | Description | Unit | Channel
+-- | ----------- | ---- | -------
+BOO-RF-WFG:WavName | Id of the current AWG waveform file. It's determined by WavType and WhiteCircOn |  |
+BOO-RF-WFG:WavNameRdbk | The heart-beat of this soft ioc. It checks the current active waveform name every second. Once it detects that the current active waveform name is not among the predifined 5 waveforms, it will trigger a sequence of actions to re-configure the AWG |  |
+BOO-RF-WFG:ProcWavName | A mismatch in WavNameRdbk will trigger this PV to process. The only thing it does is to trigger the turns-off-output PV to process |  |
+BOO-RF-WFG:TurnOffOutput | Turn off the channel output then trigger the setting waveform PV |  |
+BOO-RF-WFG:WavNameR | Set the output waveform buffer of the AWG then trigger the setting burst properties PV |  |
+BOO-RF-WFG:WaitNBurstProps | Add a delay between the waveform set-up and the burst props set-up, to prevent strange AWG behavior |  |
+BOO-RF-WFG:BurstProps | Set the burst mode props. The waveform output would be gated and triggered by the external signal, then trigger the setting sampling rate PV |  |
+BOO-RF-WFG:SRate | Set the True Arb mode and the sampling rate. Sampling rate is always 10,000 Sa/s. Then trigger the setting waveform properties PV |  |
+BOO-RF-WFG:WavProps | Set the waveform properties. Including amplitude, offset and phase. Then trigger the turn-on-output PV |  |
+BOO-RF-WFG:WaitNTurnOnOutput | Add a 0.5s delay between waveform props set-up and turning on the output to prevent strange behavior |  |
+BOO-RF-WFG:TurnOnOutput | Turn on the channel output. Then trigger the waveform readback PV to process |  |
+BOO-RF-WFG:AmpR | Set the AWG amplitude based on Amp and Offset. Trigger the AWG offset set-up PV to process |  |
+BOO-RF-WFG:OffsetR | Set the AWG offset based on Amp and offset |  |
+BOO-RF-WFG:PhaseR | Set the AWG phase based on Delay |  |
+BOO-RF-WFG:BSWV | Scan the AWG waveform properties every 5s and update the corresponding readback PVs |  |
+BOO-RF-WFG:Idn | Scan the AWG instrument id every 5s |  |
 
 ### PVs in the BOO-WC soft IOC
 
 PV | Description | Unit | Channel
 -- | ----------- | ---- | -------
-BOO-WC:Curr | White circuit DC current | mA |
-BOO-WC:Volt | White circuit AC voltage | mV |
+BOO-WC:Curr | Mock-up white circuit DC current | mA |
+BOO-WC:Volt | Mock-up white circuit AC voltage | mV |
+
+### PV correspondence between the white circuit system and the mock-up system
+
+PV in the white circuit system | PV in the mock-up system | Description
+------------------------------ | ------------------------ | -----------
+inj:BOO_DC$CURR_AM | BOO-WC:Curr | White circuit current
+inj:BOO_AC$VOLT_AM | BOO-WC:Volt | White circuit voltage
 
 ## Development notes
 
