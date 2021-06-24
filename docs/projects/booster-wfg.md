@@ -2,7 +2,76 @@
 
 ## Overview
 
-The SPEAR3 booster is powered by a 5-cell standing wave cavity at 358.54 MHz. The middle cell is coupled to a rectangular waveguide through a short coaxial line and coupling loop, which can be manually rotated to adjust the coupling to the cavity. Each cell has a fixed frequency tuner, and the two end cells have movable tuners with motors that can be adjusted during operation. Each cell has additionally a coaxial probe with a coupling loop to instrument the field amplitude. As the frequency of the SPEAR3 RF drifts over time, the booster cavity tuners need to be periodically adjusted to keep the cavity driven on resonance. We are developing a feedback system to keep the cavity on resonance by adjusting the two movable tuners. In this Engineering Note the design of the tuners feedback systems is described, as well as experimental results from a test implementation in Matlab.
+The current booster RF waveform generator (WFG) used in SPEAR3 is based on CAMAC. It's still working, but the hardware is outdated and should be retired soon, while the GUI should also be replaced with a modern one which would have more support in the upcoming years. It would be better to use EPICS as the underlying framework to make it more consistent with other components in the control system.
+
+That's why we are seeking an alternative approach to replace the current booster RF WFG. This project mainly explores and serves as a proof of concept of the following technique stack:
+
+- Commercial aribitrary waveform generator (AWG) to generate the waveform
+- EPICS as the underlying framework to drive the communication between the clients (users) and the AWG
+
+![System schematic](img/sys_schematic.png)
+
+Above is a system schematic plot that renders the usage of the AWG and the corresponding EPIC soft IOC in the system.
+
+## System specifications
+
+### Hardware (AWG)
+
+#### Features specs
+
+To be able to generate/output the current waveform buffers, and comply with the current SPEAR3 control system and the newly developed EPICS soft IOC, the AWG has to support:
+
+- Length of waveform buffer: 1024
+- Sampling rate: 10k Sa/s
+- Output value range: 0 V to 10 V
+- Vertical resolution: 16-bit
+- Support external trigger
+- Support interfaces: LAN (telnet)
+
+#### API specs
+
+To work with the EPICS soft IOC without significant workflow modifications, the AWG needs to support the following APIs (control commands):
+
+- Turn on/off the output
+- Upload/download a predefined waveform buffer
+- Get/set the current output waveform through name/id
+- Get/set the waveform properties
+    - Amplitude
+    - Offset
+    - Phase
+- Get/set the burst mode properties
+    - Gated/Ncycle
+    - Ext/Int trigger
+    - Pos/Neg polarity
+- Get/set the sampling rate
+    - Get/set frequency is also OK
+
+## Working principle
+
+First upload the following 5 predefined waveform buffers (`z1` to `z5`) to the AWG:
+
+![Waveform buffers](img/waveforms.png)
+
+The meanings of the 5 waveforms:
+
+- `z1`: $t^4$, current waveform 1
+- `z2`: Linear, current waveform 2
+- `z3`: Since, current waveform 3
+- `z4`: Edot, current waveform 4 when white circuit is off
+- `z5`: $E^4$, current waveform 4 when white circuit is on
+
+Whenever the waveform type is changed, the following actions happen:
+
+- Load the corresponding predefined waveform buffer stored in the AWG
+- Configure the other AWG properties *if needed*
+    - Sampling rate
+    - Burst mode properties
+    - Waveform properties
+
+Whenever the waveform properties are changed, the following actions happen:
+
+- Set the amplitude/offset/phase properties of the AWG
+    - Need to map the AWG properties correctly to the WFG properties. The definitions of the WFG properties is shown in the right plot in the [waveform rescaling mechanism](#waveform-rescaling-mechanism) section
 
 ## PV list
 
@@ -104,6 +173,77 @@ PV in the white circuit system | PV in the mock-up system | Description
 ------------------------------ | ------------------------ | -----------
 inj:BOO_DC$CURR_AM | BOO-WC:Curr | White circuit current
 inj:BOO_AC$VOLT_AM | BOO-WC:Volt | White circuit voltage
+
+## Caveats
+
+### Waveform rescaling mechanism
+
+![Rescaling mechanism](img/param_defs.png)
+
+To comply with the minimal output value (10 mV) requirement, the lower bound of the waveform offset is set to 0.01 V.
+
+### Power outage recovery logic
+
+![Recovery logic](img/pv_chain.png)
+
+### White circuit status change logic
+
+![White circuit status](img/wc_logic.png)
+
+### Upload new/replace old waveform buffers to the AWG
+
+**WIP**
+
+## Local test configuration
+
+### Prerequisites 
+
+To set up a local test, the following components are needed:
+
+- The AWG
+- A computer that host the EPICS soft IOCs
+- A simple signal generator
+    - At least 2 channels are needed
+- An oscilloscope
+- BNC cable x 3
+- Ethernet cable x 1
+- A working local area network (LAN)
+
+Below is the local test schematic plot. 
+
+![Local test schematic](img/local_test_schematic.png)
+
+### Software configurations
+
+Clone the WFG soft IOC and the white circuit mock-up soft IOC repos (please check [this section](#additional-resources)) to the computer. Follow the instructions in the readme of the WFG soft IOC repo and configure the EPICS environment on the computer, then compile and run the two soft IOCs. 
+
+### Hardware configurations
+
+![Local test set-up](img/local_test_setup.png)
+
+## Known issues
+
+- The waveform buffer isn’t locked to the TTL trigger sometimes
+    - Switch WavType back and forth could resolve this
+    - Or limit the waveform buffer length to 1000
+- The waveform switching time could vary between subsecond to several seconds
+    - Need to find the root cause of this
+- The shape of the waveform buffer could be not exactly the same as the current one due to the [rescaling mechanism](#waveform-rescaling-mechanism)
+- The output is not automatically turned on after a power outage recovery
+    - This could be a feature depends on the needs
+    - If not desired, simply turn off the AWG auto-recovery feature
+
+## Additional resources
+
+### Repos for the WFG EPICS soft IOC
+
+- SPEAR3-CTRL: [https://github.com/SPEAR3-CTRL/ioc-awg](https://github.com/SPEAR3-CTRL/ioc-awg) *or*
+- SLAC Hub: [https://github.com/slaclab/spear3-ioc-awg](https://github.com/slaclab/spear3-ioc-awg)
+
+### Repos for the white circuit mock-up EPICS soft IOC (for local test)
+
+- SPEAR3-CTRL: [https://github.com/SPEAR3-CTRL/ioc-whitecircuit-mockup](https://github.com/SPEAR3-CTRL/ioc-whitecircuit-mockup) *or*
+- SLAC Hub: [https://github.com/slaclab/spear3-ioc-whitecircuit-mockup](https://github.com/slaclab/spear3-ioc-whitecircuit-mockup)
 
 ## Development notes
 
